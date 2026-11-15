@@ -16,24 +16,34 @@
     <canvas id="bg-canvas" aria-hidden="true"></canvas>
     <audio id="ambient-music" preload="none" src="assets/ambient.mp3" loop></audio>
 
-    <header>
-        <a class="logo-container" href="https://sadeq.shinyapps.io/exchange_universe/" target="_blank" rel="noopener" aria-label="Open the live Exchange Universe app">
-            <img src="assets/logo-mark.svg" alt="" width="42" height="42">
-            <span>Exchange Universe<small>Monitor</small></span>
-        </a>
-        <h1>Exchange Universe Status Monitoring</h1>
-        <div class="header-controls">
-            <button type="button" class="music-toggle" id="music-btn" aria-pressed="false">🔇 Music Off</button>
-            <button type="button" class="theme-toggle" id="theme-btn">☀️ Light Mode</button>
+    <header class="site-header">
+        <div class="header-content">
+            <a class="logo-container" href="https://sadeq.shinyapps.io/exchange_universe/" target="_blank" rel="noopener" aria-label="Open the live Exchange Universe app">
+                <img src="assets/logo-mark.svg" alt="" width="40" height="40">
+                <h1>Exchange Universe<small>Monitor</small></h1>
+            </a>
+            <div class="global-status-widget" id="global-status" role="status" aria-label="System status">
+                <span class="status-led" id="global-led" aria-hidden="true"></span>
+                <strong id="global-text">Connecting…</strong>
+            </div>
+            <div class="header-controls">
+                <button type="button" class="music-toggle" id="music-btn" aria-pressed="false">Music off</button>
+                <button type="button" class="theme-toggle" id="theme-btn">Light mode</button>
+            </div>
         </div>
     </header>
 
     <main class="dashboard-layout">
         <aside class="cards-column" aria-label="Latest check status">
+            <div class="checks-heading">
+                <h2>Production checks</h2>
+                <button type="button" class="run-controls-btn" id="controls-btn">Run controls</button>
+                <a class="run-controls-btn" id="workflow-link" target="_blank" rel="noopener" hidden>GitHub Actions ↗</a>
+            </div>
             <template id="card-template">
                 <article class="card">
                     <div class="title-wrapper"><div class="title-left">
-                        <h2></h2>
+                        <h3></h3>
                         <button type="button" class="info-icon info-symbol"><span aria-hidden="true">i</span><span class="tooltip"></span></button>
                     </div></div>
                     <div class="status-badge status-inactive">
@@ -44,51 +54,59 @@
                         <span class="status-caption">WAITING</span>
                     </div>
                     <div class="meta">
-                        <p><strong>Checked:</strong> <span class="checked">—</span></p>
-                        <p><strong>Env:</strong> <span class="environment"></span></p>
+                        <p class="check-time">
+                            <span class="meta-label">Last checked</span>
+                            <time class="checked"><span class="check-hour">—</span><span class="check-date"></span></time>
+                        </p>
+                        <p class="check-environment"><span class="environment"></span></p>
                     </div>
-                    <div class="card-evidence"></div>
+                    <div class="card-footer">
+                        <div class="card-recent" role="group" hidden>
+                            <span>Recent runs</span>
+                            <div class="recent-markers"></div>
+                        </div>
+                        <div class="card-evidence"></div>
+                    </div>
                 </article>
             </template>
-            <div class="global-status-widget" id="global-status" role="status">
-                <span class="status-led" id="global-led" aria-hidden="true"></span>
-                <span>System Status: <strong id="global-text">Connecting…</strong></span>
-            </div>
-            <button type="button" class="run-controls-btn" id="controls-btn">Run controls</button>
-            <a class="run-controls-btn" id="workflow-link" target="_blank" rel="noopener" hidden>GitHub Actions ↗</a>
         </aside>
 
         <section class="chart-section" aria-labelledby="matrix-title">
-            <div class="title-wrapper">
+            <div class="chart-heading">
                 <div class="title-left">
-                    <h2 id="matrix-title">📊 Live Global Stability Matrix</h2>
-                    <button type="button" class="info-icon info-symbol" aria-label="About the stability matrix"><span aria-hidden="true">i</span><span class="tooltip">The timeline starts with the last 24 hours. Select a dot to open the exact run. Use Data Table for keyboard access to every run.</span></button>
+                    <h2 id="matrix-title">Stability history</h2>
+                    <button type="button" class="info-icon info-symbol" aria-label="About stability history"><span aria-hidden="true">i</span><span class="tooltip">Select a dot to open its run. Use the date filters for earlier runs or Table for keyboard access.</span></button>
                 </div>
-                <div class="chart-toggles" role="group" aria-label="Date range and history views">
-                    <input type="date" id="start-date" class="date-picker" aria-label="Start date" aria-describedby="date-error">
-                    <span class="date-separator" aria-hidden="true">to</span>
-                    <input type="date" id="end-date" class="date-picker" aria-label="End date" aria-describedby="date-error">
-                    <button type="button" class="chart-btn active" data-mode="2d" aria-pressed="true">Neon 2D Timeline</button>
-                    <button type="button" class="chart-btn" data-mode="3d" aria-pressed="false">3D WebGL Matrix</button>
-                    <button type="button" class="chart-btn" data-mode="table" aria-pressed="false">📄 Data Table</button>
+                <div class="chart-toggles" role="group" aria-label="History view">
+                    <button type="button" class="chart-btn active" data-mode="2d" aria-pressed="true">Timeline</button>
+                    <button type="button" class="chart-btn" data-mode="3d" aria-pressed="false">3D</button>
+                    <button type="button" class="chart-btn" data-mode="table" aria-pressed="false">Table</button>
                 </div>
             </div>
-            <p class="chart-range" id="chart-range"></p>
-            <p class="chart-range" id="feed-status" hidden></p>
+            <div class="history-toolbar">
+                <div class="date-range" role="group" aria-label="Date range">
+                    <label for="start-date">From<input type="date" id="start-date" class="date-picker" aria-describedby="date-error"></label>
+                    <label for="end-date">To<input type="date" id="end-date" class="date-picker" aria-describedby="date-error"></label>
+                </div>
+                <div class="history-meta">
+                    <p class="chart-range" id="chart-range"></p>
+                    <p class="chart-range" id="feed-status" hidden></p>
+                </div>
+            </div>
             <p class="date-error" id="date-error" role="status" hidden></p>
             <div class="chart-container" id="chartContainer">
                 <div id="historyChart" role="img" aria-label="Pass and fail timelines for Smoke, Regression, and Conversion"></div>
                 <div class="graph-message" id="chart-message" role="status" hidden></div>
-                <div class="guide-3d" id="chart-guide" hidden><span><b>Drag</b> to rotate</span><span><b>Right drag</b> to pan</span><span><b>Scroll</b> to zoom</span></div>
+                <div class="guide-3d" id="chart-guide" hidden><span><b>Select a dot</b> for details</span><span><b>Drag</b> to rotate</span><span><b>Scroll</b> to zoom</span></div>
             </div>
             <div class="table-container" id="tableContainer" hidden>
                 <div class="table-header-row">
-                    <h3>Detailed Execution Logs</h3>
+                    <h3>Run history</h3>
                     <div class="export-controls">
                         <select id="export-format" class="export-select" aria-label="Export format">
                             <option value="csv">CSV (Excel)</option><option value="json">JSON File</option><option value="txt">Plain Text</option>
                         </select>
-                        <button type="button" class="export-btn" id="export">⬇ Export</button>
+                        <button type="button" class="export-btn" id="export">Export</button>
                     </div>
                 </div>
                 <div class="data-table-wrapper" tabindex="0" aria-label="Execution history table">

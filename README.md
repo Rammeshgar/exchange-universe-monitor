@@ -6,7 +6,7 @@ Synthetic browser monitoring for the [Exchange Universe currency atlas](https://
 
 ![Exchange Universe Monitor with three status cards and a neon PASS/FAIL timeline](docs/dashboard.png)
 
-*Dashboard preview with illustrative runs. The public dashboard shows recorded GitHub Actions results.*
+*Dashboard preview captured with recorded runs. The public dashboard shows recorded GitHub Actions results.*
 
 ## Hosted monitoring
 

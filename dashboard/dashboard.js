@@ -4,15 +4,17 @@ const timezone = 'Europe/Budapest';
 const timeFormat = new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: timezone
 });
+const checkHourFormat = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: timezone });
+const checkDateFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: timezone });
 const chartRangeFormat = new Intl.DateTimeFormat('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: timezone
 });
 const timezoneOffset = new Intl.DateTimeFormat('en', { timeZone: timezone, timeZoneName: 'shortOffset' });
 const dayMs = 86_400_000;
 const lanes = [
-    { key: 'smoke', short: 'Smoke', title: '💨 Smoke Monitoring', color: '#0ea5e9', environment: 'Production UI', hint: 'Checks app availability, Shiny startup, live chart data and EUR-to-HUF conversion.' },
-    { key: 'regression', short: 'Regression', title: '🔍 E2E Regression', color: '#8b5cf6', environment: 'Production UI & CSV export', hint: 'Runs the Smoke checks and verifies the interactive atlas, comparison table and real CSV download.' },
-    { key: 'conversion', short: 'Conversion', title: '💱 Currency Conversion', color: '#14b8a6', environment: 'Production converter', hint: 'Shows the conversion check from each recorded Smoke or Regression run. It checks that doubling the EUR input doubles the HUF result within rounding tolerance.' }
+    { key: 'smoke', short: 'Smoke', title: 'Smoke Monitoring', environment: 'Production UI', hint: 'Checks app availability, Shiny startup, live chart data and EUR-to-HUF conversion.' },
+    { key: 'regression', short: 'Regression', title: 'E2E Regression', environment: 'Production UI & CSV export', hint: 'Runs the Smoke checks and verifies the interactive atlas, comparison table and real CSV download.' },
+    { key: 'conversion', short: 'Conversion', title: 'Currency Conversion', environment: 'Production converter', hint: 'Shows the conversion check from each recorded Smoke or Regression run. It checks that doubling the EUR input doubles the HUF result within rounding tolerance.' }
 ];
 const captions = {
     'explore.png': 'Currency history chart', 'conversion.png': 'EUR to HUF conversion',
@@ -56,15 +58,17 @@ function outcomeFor(run, lane) {
 }
 
 function initializeCards() {
+    const template = byId('card-template');
     for (const lane of lanes) {
-        const card = byId('card-template').content.firstElementChild.cloneNode(true);
+        const card = template.content.firstElementChild.cloneNode(true);
         card.dataset.lane = lane.key;
-        card.querySelector('h2').textContent = lane.title;
+        card.querySelector('h3').textContent = lane.title;
         card.querySelector('.info-icon').setAttribute('aria-label', lane.hint);
         card.querySelector('.tooltip').textContent = lane.hint;
         card.querySelector('.environment').textContent = lane.environment;
+        card.querySelector('.card-recent').setAttribute('aria-label', 'Recent ' + lane.short.toLowerCase() + ' results, oldest first');
         cards.set(lane.key, card);
-        byId('global-status').before(card);
+        template.parentElement.append(card);
     }
 }
 
@@ -79,7 +83,8 @@ function monitoringDelayed() {
 function updateCards() {
     for (const lane of lanes) {
         const card = cards.get(lane.key);
-        const last = state.runs.find(run => outcomeFor(run, lane));
+        const recent = state.runs.filter(run => outcomeFor(run, lane)).slice(0, 6);
+        const last = recent[0];
         const result = last && outcomeFor(last, lane);
         const badge = card.querySelector('.status-badge');
         const active = state.status?.active?.suite;
@@ -92,18 +97,37 @@ function updateCards() {
         for (const line of badge.querySelectorAll('path')) {
             if (line.getAttribute('d') !== waveform) line.setAttribute('d', waveform);
         }
-        card.querySelector('.checked').textContent = last ? timeFormat.format(Date.parse(last.started)) : '—';
+        const checked = card.querySelector('.checked');
+        const stamp = last ? Date.parse(last.started) : null;
+        checked.querySelector('.check-hour').textContent = last ? checkHourFormat.format(stamp) : '—';
+        checked.querySelector('.check-date').textContent = last ? checkDateFormat.format(stamp) : '';
+        if (last) {
+            checked.dateTime = last.started;
+            checked.title = timeFormat.format(stamp) + ' · Budapest time';
+        } else {
+            checked.removeAttribute('datetime');
+            checked.removeAttribute('title');
+        }
+        const recentGroup = card.querySelector('.card-recent');
+        recentGroup.hidden = !recent.length;
+        recentGroup.querySelector('.recent-markers').replaceChildren(...recent.reverse().map(run => {
+            const outcome = outcomeFor(run, lane);
+            const marker = actionButton(undefined, () => openRun(run.id), 'recent-marker ' + outcome.toLowerCase());
+            marker.title = outcome + ' · ' + timeFormat.format(Date.parse(run.started));
+            marker.setAttribute('aria-label', 'View ' + lane.short.toLowerCase() + ' run · ' + marker.title);
+            return marker;
+        }));
         const evidence = card.querySelector('.card-evidence');
         const view = () => openRun(last.id);
         if (result === 'Fail' && last.artifacts?.includes('failure.png')) {
             const button = actionButton(undefined, view, 'screenshot-container');
             const image = element('img', undefined, 'screenshot');
             image.src = runPath(last.id) + '/failure.png';
-            image.alt = 'View evidence for ' + lane.short + ' failure';
-            button.append(image);
+            image.alt = '';
+            button.append(image, element('span', 'View failure ↗'));
             evidence.replaceChildren(button);
         } else if (last) {
-            const label = result === 'Fail' ? '⚠ Check needs attention. View run.' : '✅ Latest check passed. View run.';
+            const label = result === 'Fail' ? 'View failed run ↗' : 'View latest run ↗';
             evidence.replaceChildren(actionButton(label, view, result === 'Fail' ? 'needs-attention' : 'no-failures'));
         } else {
             evidence.replaceChildren(element('p', 'Waiting for the first result.', 'meta'));
@@ -140,7 +164,7 @@ function selectedRange() {
     const now = Date.now();
     const start = first ? midnight(first) : (followingDay ? midnight(followingDay) : now) - dayMs;
     const end = followingDay ? midnight(followingDay) : Math.max(now, start + dayMs);
-    return { start, end, viewportStart: start, automatic: !first && !last };
+    return { start, end, viewportStart: start, viewportEnd: end, automatic: !first && !last };
 }
 
 function runsInRange(span) {
@@ -167,12 +191,15 @@ function renderHistory() {
     const range = selectedRange();
     const results = runsInRange(range);
     if (range?.automatic && results.length) {
-        // Keep the full day on the scrubber and start with the portion that contains results.
+        // Frame the recorded results and keep the full day available on the scrubber.
         const firstRun = Date.parse(results.at(-1).started);
-        range.viewportStart = Math.max(range.start, Math.min(firstRun - 5 * 60_000, range.end - 60 * 60_000));
+        const lastRun = Date.parse(results[0].started);
+        const margin = Math.min(15, Math.max(5, (lastRun - firstRun) / (12 * 60_000))) * 60_000;
+        range.viewportStart = Math.max(range.start, Math.min(firstRun - margin, lastRun - 15 * 60_000));
+        range.viewportEnd = Math.min(range.end, lastRun + margin);
     }
     const shownStart = state.mode === 'table' ? range?.start : range?.viewportStart;
-    if (range) showRange(shownStart, range.end);
+    if (range) showRange(shownStart, state.mode === 'table' ? range.end : range.viewportEnd);
     else byId('chart-range').textContent = '';
     if (state.mode === 'table') {
         const rows = results.map(run => {
@@ -201,8 +228,10 @@ function renderHistory() {
         showMessage(range ? 'No runs in this date range.' : 'Correct the date range to view runs.');
         return;
     }
+    const theme = getComputedStyle(document.documentElement);
     const series = lanes.map(lane => ({
         ...lane,
+        color: theme.getPropertyValue('--lane-' + lane.key).trim(),
         points: results.slice().reverse().flatMap(run => {
             const outcome = outcomeFor(run, lane);
             return outcome ? [{ time: Date.parse(run.started), pass: Number(outcome === 'Pass'), id: run.id }] : [];
@@ -299,9 +328,8 @@ function setText(id, value) {
 function updateControls() {
     if (hosted) {
         const publishedAt = state.status?.publishedAt;
-        const timing = 'Smoke every 15 min · Regression hourly';
         setText('feed-status', state.connected && publishedAt
-            ? timing + ' · Published ' + timeFormat.format(Date.parse(publishedAt)) + ' Budapest time'
+            ? 'Published ' + timeFormat.format(Date.parse(publishedAt)) + ' · Budapest time'
             : 'Could not reach the hosted results. Retrying…');
         return;
     }
@@ -379,7 +407,7 @@ function exportHistory() {
 
 function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
-    byId('theme-btn').textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    byId('theme-btn').textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
     stabilityMatrix.updateFloor();
     if (state.connected) renderHistory();
 }
@@ -411,7 +439,7 @@ const music = byId('ambient-music');
 const musicButton = byId('music-btn');
 function showMusicState() {
     const playing = !music.paused;
-    musicButton.textContent = playing ? '🎵 Music On' : '🔇 Music Off';
+    musicButton.textContent = playing ? 'Music on' : 'Music off';
     musicButton.setAttribute('aria-pressed', String(playing));
     musicButton.classList.toggle('playing', playing);
 }
