@@ -82,13 +82,14 @@ header {
 }
 
 .logo-container img {
-    height: 35px;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     transition: transform 0.3s;
 }
 
 .logo-container img:hover { transform: scale(1.05); }
-[data-theme="dark"] .logo-container img { filter: brightness(0) invert(1); }
 
 h1 {
     font-family: 'Montserrat', sans-serif;
@@ -293,7 +294,7 @@ h1 {
 
 @media (max-width: 768px) {
     header { flex-direction: column !important; padding: 15px 10px !important; text-align: center !important; gap: 12px !important; width: 100% !important; box-sizing: border-box !important; }
-    .logo-container img { height: 35px !important; }
+    .logo-container img { width: 35px; height: 35px; }
     h1 { font-size: 1.2rem !important; margin: 0 !important; line-height: 1.4 !important; padding: 0 5px !important; white-space: normal !important; }
     .chart-toggles { flex-direction: column !important; align-items: stretch !important; padding: 10px !important; width: 100% !important; box-sizing: border-box !important; }
     .date-picker { width: 100% !important; text-align: center !important; margin-bottom: 5px !important; padding: 10px !important; box-sizing: border-box !important; }
@@ -336,7 +337,6 @@ h1 { font-size: clamp(1.2rem, 2.04vw, 2.55rem); }
     letter-spacing: .025em;
     line-height: 1.04;
 }
-.logo-container svg { color: var(--accent-blue); }
 .logo-container span { display: grid; }
 .logo-container small { margin-top: 4px; font: 600 .75em Inter, sans-serif; letter-spacing: .13em; text-transform: uppercase; }
 .header-controls { justify-content: flex-end; }

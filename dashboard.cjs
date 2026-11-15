@@ -28,6 +28,7 @@ const assets = new Map([
   ['/assets/inter.woff2', ['node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2', 'font/woff2']],
   ['/assets/montserrat.woff2', ['node_modules/@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2', 'font/woff2']],
   ['/assets/ambient.mp3', ['dashboard/ambient.mp3', 'audio/mpeg']],
+  ['/assets/logo-mark.svg', ['dashboard/logo-mark.svg', 'image/svg+xml']],
 ]);
 let active = null;
 let lastError = null;
