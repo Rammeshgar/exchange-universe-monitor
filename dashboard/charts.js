@@ -82,7 +82,7 @@ const stabilityMatrix = (() => {
                 splitLine: { lineStyle: { color: gridColor } }
             })),
             series: lanes.map((lane, index) => ({
-                name: lane.short, type: 'line', xAxisIndex: index, yAxisIndex: index,
+                id: lane.key, name: lane.short, type: 'line', xAxisIndex: index, yAxisIndex: index,
                 data: lane.points.map(point => [point.time, point.pass, point.id]),
                 step: 'end', symbol: 'circle', symbolSize: compact ? 8 : 11, showSymbol: true,
                 itemStyle: { color: lane.color, borderColor: plotColor, borderWidth: 2 },
@@ -134,7 +134,7 @@ const stabilityMatrix = (() => {
                     encode: { x: 0, y: 1, z: 2 }, lineStyle: { width: 2, color: lane.color, opacity: .55 }
                 })),
                 ...lanes.map((lane, index) => ({
-                    name: lane.short, type: 'scatter3D', data: points[index],
+                    id: lane.key, name: lane.short, type: 'scatter3D', data: points[index],
                     encode: { x: 0, y: 1, z: 2 }, symbol: symbols[index], symbolSize: 15,
                     itemStyle: { opacity: 1, color: item => item.value[2] === 1 ? passColor : failColor }
                 }))
@@ -179,11 +179,11 @@ const stabilityMatrix = (() => {
                 const depth = cz / cw;
                 if (distance <= hitRadius && (!closest || distance < closest.distance ||
                     (distance === closest.distance && depth < closest.depth))) {
-                    closest = { id, distance, depth };
+                    closest = { id, lane: series.id, distance, depth };
                 }
             }
         }
-        return closest?.id;
+        return closest;
     }
 
     // ECharts GL can miss the point hit entirely. Use the displayed camera and markers,
@@ -203,8 +203,8 @@ const stabilityMatrix = (() => {
         const isClick = visibleMode === '3d' && press?.id === event.pointerId;
         press = null;
         if (!isClick) return;
-        const id = pickWebGLRun(event);
-        if (id) selectRun(id);
+        const point = pickWebGLRun(event);
+        if (point) selectRun(point.id, point.lane);
     }, true);
 
     function render(mode, lanes, span, onSelect, onZoom) {
@@ -216,7 +216,9 @@ const stabilityMatrix = (() => {
         if (!chart) {
             chart = echarts.init(target, null, { devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2) });
             chart.on('click', point => {
-                if (visibleMode === '2d' && typeof point.value?.at(-1) === 'string') selectRun(point.value.at(-1));
+                if (visibleMode === '2d' && typeof point.value?.at(-1) === 'string') {
+                    selectRun(point.value.at(-1), point.seriesId);
+                }
             });
             chart.on('datazoom', () => {
                 const zoom = chart.getModel().getComponent('dataZoom');

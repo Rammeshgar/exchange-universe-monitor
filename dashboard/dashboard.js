@@ -51,10 +51,23 @@ function runPath(id) {
     return 'runs/' + encodeURIComponent(id);
 }
 
+function conversionCheck(run) {
+    return run.checks.find(item => item.name.startsWith('EUR → HUF conversion'));
+}
+
 function outcomeFor(run, lane) {
     if (lane.key !== 'conversion') return run.suite === lane.key ? run.status : null;
-    const check = run.checks.find(item => item.name.startsWith('EUR → HUF conversion'));
-    return check?.status === 'Skipped' ? null : check?.status;
+    const status = conversionCheck(run)?.status;
+    return status === 'Pass' || status === 'Fail' ? status : null;
+}
+
+function evidenceFor(run, conversion) {
+    const files = run.artifacts || [];
+    if (!conversion) return files;
+    // Reports keep one generic failure capture. Include it only when its check is unambiguous.
+    const conversionFailure = conversion.status === 'Fail' &&
+        run.checks.every(check => check.status !== 'Fail' || check === conversion);
+    return files.filter(file => /^conversion\.(png|jpg)$/.test(file) || (conversionFailure && file === 'failure.png'));
 }
 
 function initializeCards() {
@@ -112,14 +125,15 @@ function updateCards() {
         recentGroup.hidden = !recent.length;
         recentGroup.querySelector('.recent-markers').replaceChildren(...recent.reverse().map(run => {
             const outcome = outcomeFor(run, lane);
-            const marker = actionButton(undefined, () => openRun(run.id), 'recent-marker ' + outcome.toLowerCase());
+            const marker = actionButton(undefined, () => openRun(run.id, lane.key), 'recent-marker ' + outcome.toLowerCase());
             marker.title = outcome + ' · ' + timeFormat.format(Date.parse(run.started));
-            marker.setAttribute('aria-label', 'View ' + lane.short.toLowerCase() + ' run · ' + marker.title);
+            const detailLabel = lane.key === 'conversion' ? 'conversion result' : lane.short.toLowerCase() + ' run';
+            marker.setAttribute('aria-label', 'View ' + detailLabel + ' · ' + marker.title);
             return marker;
         }));
         const evidence = card.querySelector('.card-evidence');
-        const view = () => openRun(last.id);
-        if (result === 'Fail' && last.artifacts?.includes('failure.png')) {
+        const view = () => openRun(last.id, lane.key);
+        if (result === 'Fail' && evidenceFor(last, lane.key === 'conversion' ? conversionCheck(last) : null).includes('failure.png')) {
             const button = actionButton(undefined, view, 'screenshot-container');
             const image = element('img', undefined, 'screenshot');
             image.src = runPath(last.id) + '/failure.png';
@@ -127,7 +141,7 @@ function updateCards() {
             button.append(image, element('span', 'View failure ↗'));
             evidence.replaceChildren(button);
         } else if (last) {
-            const label = result === 'Fail' ? 'View failed run ↗' : 'View latest run ↗';
+            const label = lane.key === 'conversion' ? 'View conversion ↗' : result === 'Fail' ? 'View failed run ↗' : 'View latest run ↗';
             evidence.replaceChildren(actionButton(label, view, result === 'Fail' ? 'needs-attention' : 'no-failures'));
         } else {
             evidence.replaceChildren(element('p', 'Waiting for the first result.', 'meta'));
@@ -263,28 +277,36 @@ function setMode(mode) {
     renderHistory();
 }
 
-function openRun(id) {
+function openRun(id, laneKey) {
     const run = state.runs.find(item => item.id === id);
     if (!run) return;
-    byId('run-title').textContent = suiteName(run.suite) + ' · Test Details';
+    const conversion = laneKey === 'conversion' ? conversionCheck(run) : null;
+    if (laneKey === 'conversion' && !conversion) return;
+    const suite = suiteName(run.suite);
+    byId('run-title').textContent = (conversion ? 'Currency Conversion' : suite) + ' · Test Details';
     const base = runPath(id);
     const summary = element('dl', undefined, 'detail-grid');
-    for (const [term, value] of [
+    const fields = conversion ? [
+        ['Result', conversion.status], ['Run started · Budapest time', timeFormat.format(Date.parse(run.started))],
+        ['Source run', suite + ' · ' + run.trigger], ['Check duration', (conversion.ms / 1000).toFixed(1) + ' s']
+    ] : [
         ['Result', run.status], ['Checked · Budapest time', timeFormat.format(Date.parse(run.started))],
         ['Trigger', run.trigger], ['Duration', (run.durationMs / 1000).toFixed(1) + ' s']
-    ]) {
+    ];
+    for (const [term, value] of fields) {
         const item = element('div');
         item.append(element('dt', term), element('dd', value));
         summary.append(item);
     }
     const checks = element('ul', undefined, 'check-list');
-    for (const check of run.checks) {
+    for (const check of conversion ? [conversion] : run.checks) {
         const item = element('li');
         const pill = element('span', check.status, check.status === 'Pass' ? 'pill-pass' : check.status === 'Fail' ? 'pill-fail' : '');
         item.append(pill, element('strong', check.name), element('p', check.detail));
         checks.append(item);
     }
     const files = element('div', undefined, 'download-row');
+    if (conversion) files.append(actionButton('View full ' + suite + ' run ↗', () => openRun(id), 'table-link'));
     const json = element('a', 'Download result JSON');
     json.href = base + '/result.json';
     json.download = 'result.json';
@@ -298,7 +320,7 @@ function openRun(id) {
     }
     const images = element('section', undefined, 'modal-images');
     const gallery = element('div', undefined, 'screenshot-gallery');
-    for (const filename of run.artifacts || []) {
+    for (const filename of evidenceFor(run, conversion)) {
         if (filename === 'comparison.csv') {
             const csv = element('a', 'Download comparison CSV');
             csv.href = base + '/comparison.csv';
@@ -320,7 +342,7 @@ function openRun(id) {
         gallery.append(figure);
     }
     images.append(element('h3', 'Screenshots'), gallery.childElementCount
-        ? gallery : element('p', 'No screenshots were saved for this run.', 'evidence-empty'));
+        ? gallery : element('p', conversion ? 'No screenshots are available for this conversion check.' : 'No screenshots were saved for this run.', 'evidence-empty'));
     byId('run-detail').replaceChildren(summary, checks, files, images);
     if (!details.open) details.showModal();
     byId('run-title').focus();
