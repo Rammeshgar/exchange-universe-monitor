@@ -4,21 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Exchange Universe Status Monitoring</title>
-    <link rel="icon" type="image/svg+xml" href="/assets/logo-mark.svg">
-    <link rel="stylesheet" href="/dashboard.css">
-    <script defer src="/assets/echarts.js"></script>
-    <script defer src="/assets/echarts-gl.js"></script>
-    <script defer src="/assets/three.js"></script>
-    <script defer src="/charts.js"></script>
-    <script defer src="/dashboard.js"></script>
+    <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
+    <link rel="stylesheet" href="dashboard.css">
+    <script defer src="assets/echarts.js"></script>
+    <script defer src="assets/echarts-gl.js"></script>
+    <script defer src="assets/three.js"></script>
+    <script defer src="charts.js"></script>
+    <script defer src="dashboard.js"></script>
 </head>
 <body>
     <canvas id="bg-canvas" aria-hidden="true"></canvas>
-    <audio id="ambient-music" preload="none" src="/assets/ambient.mp3" loop></audio>
+    <audio id="ambient-music" preload="none" src="assets/ambient.mp3" loop></audio>
 
     <header>
         <a class="logo-container" href="https://sadeq.shinyapps.io/exchange_universe/" target="_blank" rel="noopener" aria-label="Open the live Exchange Universe app">
-            <img src="/assets/logo-mark.svg" alt="" width="42" height="42">
+            <img src="assets/logo-mark.svg" alt="" width="42" height="42">
             <span>Exchange Universe<small>Monitor</small></span>
         </a>
         <h1>Exchange Universe Status Monitoring</h1>
@@ -55,6 +55,7 @@
                 <span>System Status: <strong id="global-text">Connecting…</strong></span>
             </div>
             <button type="button" class="run-controls-btn" id="controls-btn">Run controls</button>
+            <a class="run-controls-btn" id="workflow-link" target="_blank" rel="noopener" hidden>GitHub Actions ↗</a>
         </aside>
 
         <section class="chart-section" aria-labelledby="matrix-title">
@@ -73,6 +74,7 @@
                 </div>
             </div>
             <p class="chart-range" id="chart-range"></p>
+            <p class="chart-range" id="feed-status" hidden></p>
             <p class="date-error" id="date-error" role="status" hidden></p>
             <div class="chart-container" id="chartContainer">
                 <div id="historyChart" role="img" aria-label="Pass and fail timelines for Smoke, Regression, and Conversion"></div>

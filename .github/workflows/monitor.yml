@@ -1,0 +1,133 @@
+name: Exchange Universe monitoring
+
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+    - cron: '13 * * * *'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Browser checks to run
+        type: choice
+        options:
+          - both
+          - smoke
+          - regression
+        default: both
+
+permissions: {}
+
+concurrency:
+  group: exchange-universe-monitor
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      healthy: ${{ steps.browser.outputs.healthy }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Run production browser checks
+        id: browser
+        env:
+          SELECTED: ${{ inputs.suite || (github.event.schedule == '13 * * * *' && 'regression' || 'smoke') }}
+          TRIGGER: ${{ github.event_name == 'schedule' && 'scheduled' || 'manual' }}
+        run: node tools/hosted-monitor.cjs record "$SELECTED" "$TRIGGER" "$RUNNER_TEMP/monitor-incoming"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monitor-run
+          path: ${{ runner.temp }}/monitor-incoming
+          if-no-files-found: error
+          retention-days: 3
+
+  build:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        with:
+          name: monitor-run
+          path: ${{ runner.temp }}/monitor-incoming
+      - name: Open the persisted run archive
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin refs/heads/monitor-data >/dev/null; then
+            git fetch --depth=1 origin refs/heads/monitor-data
+            base=$(git rev-parse FETCH_HEAD)
+          else
+            code=$?
+            if [ "$code" -ne 2 ]; then exit "$code"; fi
+            base=$(git commit-tree "$(git mktree </dev/null)" -m 'Initialize the monitor history')
+          fi
+          snapshot="$RUNNER_TEMP/monitor-history"
+          git worktree add --detach "$snapshot" "$base"
+          echo "MONITOR_SNAPSHOT=$snapshot" >> "$GITHUB_ENV"
+      - name: Build the public dashboard
+        run: node tools/hosted-monitor.cjs publish "$RUNNER_TEMP/monitor-incoming" "$MONITOR_SNAPSHOT" "$RUNNER_TEMP/monitor-site"
+      - name: Deliver configured email alarms
+        continue-on-error: true
+        env:
+          MAIL_SERVER_ADDRESS: ${{ secrets.MAIL_SERVER_ADDRESS }}
+          MAIL_SERVER_PORT: ${{ secrets.MAIL_SERVER_PORT }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_SENDER_ADDRESS: ${{ secrets.MAIL_SENDER_ADDRESS }}
+          MAIL_RECIPIENT_ADDRESS: ${{ secrets.MAIL_RECIPIENT_ADDRESS }}
+          ALERT_TIMEZONE: ${{ vars.ALERT_TIMEZONE }}
+          ALERT_START_HOUR: ${{ vars.ALERT_START_HOUR }}
+          ALERT_END_HOUR: ${{ vars.ALERT_END_HOUR }}
+        run: node tools/hosted-monitor.cjs notify "$MONITOR_SNAPSHOT" "$RUNNER_TEMP/monitor-incoming"
+      - name: Save the run archive
+        run: |
+          git -C "$MONITOR_SNAPSHOT" add --all
+          if ! git -C "$MONITOR_SNAPSHOT" diff --cached --quiet; then
+            git -C "$MONITOR_SNAPSHOT" commit -m "Record workflow $GITHUB_RUN_ID"
+            git push origin "$(git -C "$MONITOR_SNAPSHOT" rev-parse HEAD):refs/heads/monitor-data"
+          fi
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/monitor-site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: pages
+
+  report-failure:
+    needs: [checks, deploy]
+    if: needs.checks.outputs.healthy == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark a failed check after publishing its evidence
+        run: exit 1

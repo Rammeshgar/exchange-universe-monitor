@@ -2,13 +2,21 @@
 
 Synthetic browser monitoring for the [Exchange Universe currency atlas](https://sadeq.shinyapps.io/exchange_universe/). A Playwright runner checks public user journeys, and a local dashboard makes failures, timing and evidence easy to inspect. Optional SMTP alerts reach the configured recipients even when the dashboard tab is closed.
 
-[Download the Windows package](https://github.com/Rammeshgar/exchange-universe-monitor/releases/latest) · [Exchange Universe case study](https://rammeshgar.github.io/exchange-universe/#monitoring)
+[Live monitoring dashboard](https://rammeshgar.github.io/exchange-universe-monitor/) · [GitHub Actions](https://github.com/Rammeshgar/exchange-universe-monitor/actions) · [Windows download](https://github.com/Rammeshgar/exchange-universe-monitor/releases/latest) · [Case study](https://rammeshgar.github.io/exchange-universe/#monitoring)
 
 ![Exchange Universe Monitor with three status cards and a neon PASS/FAIL timeline](docs/dashboard.png)
 
-*Dashboard preview with illustrative runs. The timeline, 3D WebGL matrix, data table and date filters use your run history once installed.*
+*Dashboard preview with illustrative runs. The public dashboard shows recorded GitHub Actions results.*
 
-## Install and start
+## Hosted monitoring
+
+GitHub Actions runs Smoke every 15 minutes and Regression hourly. The public dashboard refreshes once a minute and offers the latest 200 runs, check details, failure screenshots when available, downloads, and links to the matching Actions runs. GitHub schedules can start late.
+
+Run either suite from **Actions → Exchange Universe monitoring → Run workflow**. The workflow saves recent results on the `monitor-data` branch and deploys the dashboard to GitHub Pages, including when a check fails. The browser uses the live app's public test paths.
+
+For hosted alerts, set the `MAIL_SERVER_ADDRESS`, `MAIL_SERVER_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SENDER_ADDRESS`, and `MAIL_RECIPIENT_ADDRESS` repository Actions secrets. The SMTP step handles failure, reminder, and recovery independently for each suite. Optional Actions variables `ALERT_TIMEZONE`, `ALERT_START_HOUR`, and `ALERT_END_HOUR` control the failure notification window.
+
+## Install and start locally
 
 1. Download **Exchange-Universe-Monitor-Windows.zip** from Releases and extract it to a folder you can write to.
 2. Install Node.js 22 or later if needed.

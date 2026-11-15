@@ -1,4 +1,5 @@
 const byId = id => document.getElementById(id);
+const hosted = document.body.dataset.hosted === 'true';
 const timezone = 'Europe/Budapest';
 const timeFormat = new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: timezone
@@ -45,7 +46,7 @@ function suiteName(key) {
 }
 
 function runPath(id) {
-    return '/runs/' + encodeURIComponent(id);
+    return 'runs/' + encodeURIComponent(id);
 }
 
 function outcomeFor(run, lane) {
@@ -65,6 +66,14 @@ function initializeCards() {
         cards.set(lane.key, card);
         byId('global-status').before(card);
     }
+}
+
+function monitoringDelayed() {
+    if (!hosted) return false;
+    return Object.entries(state.status?.suites || {}).some(([suite, { minutes }]) => {
+        const latest = state.runs.find(run => run.suite === suite);
+        return latest && Date.now() - Date.parse(latest.started) > (2 * minutes + 15) * 60_000;
+    });
 }
 
 function updateCards() {
@@ -103,10 +112,12 @@ function updateCards() {
     const incident = Object.values(state.status?.incidents || {}).some(Boolean);
     const collecting = !lanes.every(lane => state.runs.some(run => outcomeFor(run, lane)));
     const system = byId('global-text');
-    const label = !state.connected ? 'Disconnected' : incident ? 'Degraded' : collecting ? 'Collecting data' : 'All Operational';
+    const delayed = monitoringDelayed();
+    const warning = !state.connected || incident || delayed;
+    const label = !state.connected ? 'Disconnected' : incident ? 'Degraded' : delayed ? 'Checks delayed' : collecting ? 'Collecting data' : 'All Operational';
     system.textContent = label;
-    system.className = !state.connected || incident ? 'degraded' : collecting ? '' : 'operational';
-    byId('global-led').className = 'status-led ' + (!state.connected || incident ? 'led-fail' : collecting ? '' : 'led-pass');
+    system.className = warning ? 'degraded' : collecting ? '' : 'operational';
+    byId('global-led').className = 'status-led ' + (warning ? 'led-fail' : collecting ? '' : 'led-pass');
 }
 
 function midnight(value) {
@@ -249,6 +260,13 @@ function openRun(id) {
     json.href = base + '/result.json';
     json.download = 'result.json';
     files.append(json);
+    if (/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/actions\/runs\/\d+$/.test(run.runUrl || '')) {
+        const workflow = element('a', 'GitHub Actions run ↗');
+        workflow.href = run.runUrl;
+        workflow.target = '_blank';
+        workflow.rel = 'noopener';
+        files.append(workflow);
+    }
     const images = element('div', undefined, 'modal-images');
     for (const filename of run.artifacts || []) {
         if (filename === 'comparison.csv') {
@@ -279,6 +297,14 @@ function setText(id, value) {
 }
 
 function updateControls() {
+    if (hosted) {
+        const publishedAt = state.status?.publishedAt;
+        const timing = 'Smoke every 15 min · Regression hourly';
+        setText('feed-status', state.connected && publishedAt
+            ? timing + ' · Published ' + timeFormat.format(Date.parse(publishedAt)) + ' Budapest time'
+            : 'Could not reach the hosted results. Retrying…');
+        return;
+    }
     const status = state.status;
     const active = status?.active;
     byId('run').disabled = !state.connected || Boolean(active);
@@ -294,15 +320,15 @@ function updateControls() {
 
 async function syncStatus() {
     try {
-        const response = await fetch('/api/status');
-        if (!response.ok) throw new Error('Local monitor unavailable');
+        const response = await fetch(hosted ? 'status.json' : '/api/status', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Monitor status unavailable');
         const status = await response.json();
         const oldSignature = runSignature;
         runSignature = status.runs.map(run => run.id).join('|');
         state.status = status;
         state.runs = status.runs;
         state.connected = true;
-        const changes = JSON.stringify([runSignature, status.active?.suite, status.incidents]);
+        const changes = JSON.stringify([runSignature, status.active?.suite, status.incidents, monitoringDelayed()]);
         if (changes !== statusSignature) {
             statusSignature = changes;
             updateCards();
@@ -359,6 +385,10 @@ function applyTheme(theme) {
 }
 
 initializeCards();
+if (hosted) {
+    byId('workflow-link').hidden = false;
+    byId('feed-status').hidden = false;
+}
 applyTheme(localStorage.getItem('exchange-monitor-theme') === 'light' ? 'light' : 'dark');
 stabilityMatrix.startFloor();
 byId('theme-btn').addEventListener('click', () => {
@@ -405,6 +435,6 @@ musicButton.addEventListener('click', async () => {
 
 async function poll() {
     await syncStatus();
-    setTimeout(poll, 1500);
+    setTimeout(poll, hosted ? 60_000 : 1500);
 }
 poll();

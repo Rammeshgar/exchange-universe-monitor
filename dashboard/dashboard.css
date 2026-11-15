@@ -307,13 +307,13 @@ h1 {
 /* Exchange Universe uses the original console layout with local evidence. */
 @font-face {
     font-family: Inter;
-    src: url('/assets/inter.woff2') format('woff2');
+    src: url('assets/inter.woff2') format('woff2');
     font-weight: 100 900;
     font-display: swap;
 }
 @font-face {
     font-family: Montserrat;
-    src: url('/assets/montserrat.woff2') format('woff2');
+    src: url('assets/montserrat.woff2') format('woff2');
     font-weight: 100 900;
     font-display: swap;
 }

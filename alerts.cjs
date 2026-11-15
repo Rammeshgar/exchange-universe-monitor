@@ -7,6 +7,7 @@ const configPath = path.join(__dirname, 'email-alerts.env');
 const suiteTitles = { smoke: 'Smoke Monitoring', regression: 'E2E Regression' };
 const target = 'https://sadeq.shinyapps.io/exchange_universe/';
 const cooldown = 60 * 60_000;
+const requiredMailKeys = ['MAIL_SERVER_ADDRESS', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_SENDER_ADDRESS', 'MAIL_RECIPIENT_ADDRESS'];
 
 function integer(raw, fallback, name, min, max) {
   const value = raw ? Number(raw) : fallback;
@@ -28,8 +29,15 @@ async function loadConfig(file = configPath) {
     if (error.code === 'ENOENT') return null;
     throw error;
   }
-  const env = parseEnv(content);
-  for (const key of ['MAIL_SERVER_ADDRESS', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_SENDER_ADDRESS', 'MAIL_RECIPIENT_ADDRESS']) {
+  return parseConfig(parseEnv(content));
+}
+
+function loadEnvironmentConfig(env) {
+  return requiredMailKeys.some(key => env[key]?.trim()) ? parseConfig(env) : null;
+}
+
+function parseConfig(env) {
+  for (const key of requiredMailKeys) {
     if (!env[key]?.trim()) throw configError('Set ' + key + ' in email-alerts.env.');
   }
   const recipients = env.MAIL_RECIPIENT_ADDRESS.split(',').map(address => address.trim());
@@ -98,6 +106,7 @@ async function buildMessage(config, type, run, evidenceDir, now = Date.now()) {
       test ? 'This is a synthetic SMTP delivery test.' : title + (failure ? ' reported a failure.' : ' is passing again.'),
       'Time (UTC): ' + new Date(now).toISOString(),
       ...(test ? [] : ['Run started (UTC): ' + run.started, 'Trigger: ' + run.trigger]),
+      ...(!test && run.runUrl ? ['GitHub Actions: ' + run.runUrl] : []),
       'Exchange Universe: ' + target,
       ...checkLines
     ].join('\n\n'),
@@ -145,4 +154,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { loadConfig, decideAlert, sendAlert, buildMessage, errorLabel };
+module.exports = { loadConfig, loadEnvironmentConfig, decideAlert, sendAlert, buildMessage, errorLabel };
