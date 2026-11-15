@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Exchange Universe Status Monitoring</title>
+    <link rel="stylesheet" href="/dashboard.css">
+    <script defer src="/assets/echarts.js"></script>
+    <script defer src="/assets/echarts-gl.js"></script>
+    <script defer src="/assets/three.js"></script>
+    <script defer src="/charts.js"></script>
+    <script defer src="/dashboard.js"></script>
+</head>
+<body>
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+    <audio id="ambient-music" preload="none" src="/assets/ambient.mp3" loop></audio>
+
+    <header>
+        <a class="logo-container" href="https://sadeq.shinyapps.io/exchange_universe/" target="_blank" rel="noopener" aria-label="Open the live Exchange Universe app">
+            <svg aria-hidden="true" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="16" cy="16" r="13"/><ellipse cx="16" cy="16" rx="6" ry="13"/><path d="M3 16h26M6 9h20M6 23h20"/></svg>
+            <span>Exchange Universe<small>A currency atlas</small></span>
+        </a>
+        <h1>Exchange Universe Status Monitoring</h1>
+        <div class="header-controls">
+            <button type="button" class="music-toggle" id="music-btn" aria-pressed="false">🔇 Music Off</button>
+            <button type="button" class="theme-toggle" id="theme-btn">☀️ Light Mode</button>
+        </div>
+    </header>
+
+    <main class="dashboard-layout">
+        <aside class="cards-column" aria-label="Latest check status">
+            <template id="card-template">
+                <article class="card">
+                    <div class="title-wrapper"><div class="title-left">
+                        <h2></h2>
+                        <button type="button" class="info-icon info-symbol"><span aria-hidden="true">i</span><span class="tooltip"></span></button>
+                    </div></div>
+                    <div class="status-badge status-inactive">
+                        <svg aria-hidden="true" class="heartbeat-icon" viewBox="0 0 100 30">
+                            <path class="hb-base" pathLength="100"/>
+                            <path class="hb-path" pathLength="100"/>
+                        </svg>
+                        <span class="status-caption">WAITING</span>
+                    </div>
+                    <div class="meta">
+                        <p><strong>Checked:</strong> <span class="checked">—</span></p>
+                        <p><strong>Env:</strong> <span class="environment"></span></p>
+                    </div>
+                    <div class="card-evidence"></div>
+                </article>
+            </template>
+            <div class="global-status-widget" id="global-status" role="status">
+                <span class="status-led" id="global-led" aria-hidden="true"></span>
+                <span>System Status: <strong id="global-text">Connecting…</strong></span>
+            </div>
+            <button type="button" class="run-controls-btn" id="controls-btn">Run controls</button>
+        </aside>
+
+        <section class="chart-section" aria-labelledby="matrix-title">
+            <div class="title-wrapper">
+                <div class="title-left">
+                    <h2 id="matrix-title">📊 Live Global Stability Matrix</h2>
+                    <button type="button" class="info-icon info-symbol" aria-label="About the stability matrix"><span aria-hidden="true">i</span><span class="tooltip">The timeline starts with the last 24 hours. Select a dot to open the exact run. Use Data Table for keyboard access to every run.</span></button>
+                </div>
+                <div class="chart-toggles" role="group" aria-label="Date range and history views">
+                    <input type="date" id="start-date" class="date-picker" aria-label="Start date" aria-describedby="date-error">
+                    <span class="date-separator" aria-hidden="true">to</span>
+                    <input type="date" id="end-date" class="date-picker" aria-label="End date" aria-describedby="date-error">
+                    <button type="button" class="chart-btn active" data-mode="2d" aria-pressed="true">Neon 2D Timeline</button>
+                    <button type="button" class="chart-btn" data-mode="3d" aria-pressed="false">3D WebGL Matrix</button>
+                    <button type="button" class="chart-btn" data-mode="table" aria-pressed="false">📄 Data Table</button>
+                </div>
+            </div>
+            <p class="chart-range" id="chart-range"></p>
+            <p class="date-error" id="date-error" role="status" hidden></p>
+            <div class="chart-container" id="chartContainer">
+                <div id="historyChart" role="img" aria-label="Pass and fail timelines for Smoke, Regression, and Conversion"></div>
+                <div class="graph-message" id="chart-message" role="status" hidden></div>
+                <div class="guide-3d" id="chart-guide" hidden><span><b>Drag</b> to rotate</span><span><b>Right drag</b> to pan</span><span><b>Scroll</b> to zoom</span></div>
+            </div>
+            <div class="table-container" id="tableContainer" hidden>
+                <div class="table-header-row">
+                    <h3>Detailed Execution Logs</h3>
+                    <div class="export-controls">
+                        <select id="export-format" class="export-select" aria-label="Export format">
+                            <option value="csv">CSV (Excel)</option><option value="json">JSON File</option><option value="txt">Plain Text</option>
+                        </select>
+                        <button type="button" class="export-btn" id="export">⬇ Export</button>
+                    </div>
+                </div>
+                <div class="data-table-wrapper" tabindex="0" aria-label="Execution history table">
+                    <table class="data-table"><thead><tr><th scope="col">Date &amp; Time</th><th scope="col">Test Workflow</th><th scope="col">Conclusion</th><th scope="col">Duration</th><th scope="col">Evidence</th></tr></thead><tbody id="run-table"></tbody></table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <dialog id="run-dialog" class="modal-content" aria-labelledby="run-title">
+        <form method="dialog"><button class="modal-close" aria-label="Close run details">×</button></form>
+        <div class="modal-header"><h2 id="run-title" tabindex="-1">Test Details</h2></div>
+        <div id="run-detail"></div>
+    </dialog>
+    <dialog id="controls-dialog" class="modal-content" aria-labelledby="controls-title">
+        <form method="dialog"><button class="modal-close" aria-label="Close monitor controls">×</button></form>
+        <div class="modal-header"><h2 id="controls-title">Run controls</h2></div>
+        <div class="run-actions">
+            <select id="suite" class="export-select" aria-label="Check suite"><option value="smoke">Smoke</option><option value="regression">Regression</option></select>
+            <button type="button" class="theme-toggle" id="run" disabled>▶ Run check</button>
+            <button type="button" class="theme-toggle" id="schedule" disabled>Pause schedule</button>
+        </div>
+        <p id="activity" role="status">Connecting to the local monitor…</p>
+        <p id="next-checks"></p>
+    </dialog>
+</body>
+</html>

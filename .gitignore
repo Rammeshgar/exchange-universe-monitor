@@ -1,0 +1,7 @@
+node_modules/
+runs/
+monitor-state.json*
+email-alerts.env
+dashboard*.log
+dashboard-preview.png
+dashboard-webgl-preview.png
