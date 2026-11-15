@@ -478,7 +478,11 @@ h1, h2, h3, p { margin-block-start: 0; }
 .pill-pass, .pill-fail { margin-right: 7px; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; }
 .pill-pass { background: var(--good-bg); color: var(--good); }
 .pill-fail { background: var(--bad-bg); color: var(--bad); }
-.modal-images { display: grid; gap: 8px; margin-top: 10px; }
+.modal-images { margin-top: 15px; }
+.modal-images h3 { margin: 0 0 6px; font-size: 14px; }
+.screenshot-gallery { display: grid; gap: 10px; }
+.screenshot-gallery figure { margin: 0; }
+.screenshot-gallery figcaption, .evidence-empty { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; }
 .modal-images img { display: block; max-width: 100%; border: 1px solid var(--line); border-radius: 6px; }
 .download-row, .run-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
 .download-row a { font-size: 12px; text-underline-offset: 3px; }

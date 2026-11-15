@@ -8,6 +8,13 @@ const suites = { smoke: { minutes: 15 }, regression: { minutes: 60 } };
 const idPattern = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z$/;
 const retention = 200;
 const safeRunUrl = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/actions\/runs\/\d+$/;
+const publicScreenshots = new Set(['explore.jpg', 'conversion.jpg', 'atlas.jpg', 'data.jpg', 'failure.png']);
+
+function hasImageSignature(file, image) {
+  return file.endsWith('.jpg')
+    ? image.subarray(0, 3).toString('hex') === 'ffd8ff'
+    : image.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
+}
 
 async function readJson(file, fallback) {
   try {
@@ -36,17 +43,18 @@ async function saveHostedRun(folder, id, run, sourceDir) {
   const destination = path.join(folder, id);
   await fs.mkdir(destination, { recursive: true });
   const artifacts = [];
-  if (run.status === 'Fail' && run.artifacts?.includes('failure.png')) {
-    const source = path.join(sourceDir, id, 'failure.png');
+  for (const file of new Set(run.artifacts || [])) {
+    if (!publicScreenshots.has(file)) continue;
+    const source = path.join(sourceDir, id, file);
     const meta = await fs.stat(source).catch(error => {
       if (error.code !== 'ENOENT') throw error;
       return null;
     });
     if (meta?.isFile() && meta.size < 5 * 1024 * 1024) {
       const image = await fs.readFile(source);
-      if (image.subarray(0, 8).toString('hex') === '89504e470d0a1a0a') {
-        await fs.writeFile(path.join(destination, 'failure.png'), image);
-        artifacts.push('failure.png');
+      if (hasImageSignature(file, image)) {
+        await fs.writeFile(path.join(destination, file), image);
+        artifacts.push(file);
       }
     }
   }
@@ -73,7 +81,8 @@ async function record(selection, trigger, target) {
   for (const suite of chosen) {
     const started = new Date();
     const monitor = spawnSync(process.execPath, [path.join(root, 'monitor.cjs'), suite, trigger], {
-      cwd: root, encoding: 'utf8', timeout: 240_000, maxBuffer: 1024 * 1024
+      cwd: root, encoding: 'utf8', timeout: 240_000, maxBuffer: 1024 * 1024,
+      env: { ...process.env, EXCHANGE_HOSTED_EVIDENCE: '1' }
     });
     const created = (await directories(runsDir)).filter(id => !existing.has(id)).sort().at(-1);
     const report = created && await readJson(path.join(runsDir, created, 'result.json'), null);
@@ -114,9 +123,12 @@ async function publish(incoming, snapshot, site) {
     if (run.id !== id || !Object.hasOwn(suites, run.suite) || !['Pass', 'Fail'].includes(run.status)) {
       throw new Error('Invalid result in the workflow artifact.');
     }
+    if (!Array.isArray(run.artifacts) || run.artifacts.some(file => !publicScreenshots.has(file))) {
+      throw new Error('Unexpected files in the workflow result.');
+    }
     const destination = path.join(archive, id);
     await fs.mkdir(destination, { recursive: true });
-    for (const file of ['result.json', ...(run.artifacts.includes('failure.png') ? ['failure.png'] : [])]) {
+    for (const file of ['result.json', ...run.artifacts]) {
       await fs.copyFile(path.join(from, file), path.join(destination, file));
     }
   }

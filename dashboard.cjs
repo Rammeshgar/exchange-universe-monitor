@@ -173,8 +173,8 @@ const server = createServer(async (req, res) => {
     }
     if (req.method !== 'GET') return json(res, 405, { error: 'Method not available.' });
     if (url.pathname === '/api/status') return json(res, 200, { runs: await history(), active, lastError, enabled: saved.enabled, next, suites, incidents: saved.incidents });
-    const artifact = /^\/runs\/(\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d\.\d{3}Z)\/(explore\.png|conversion\.png|atlas\.png|data\.png|failure\.png|result\.json|comparison\.csv)$/.exec(url.pathname);
-    const mime = { '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.csv': 'text/csv; charset=utf-8' };
+    const artifact = /^\/runs\/(\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d\.\d{3}Z)\/((?:explore|conversion|atlas|data)\.(?:png|jpg)|failure\.png|result\.json|comparison\.csv)$/.exec(url.pathname);
+    const mime = { '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json; charset=utf-8', '.csv': 'text/csv; charset=utf-8' };
     const asset = assets.get(url.pathname);
     const file = asset ? [path.join(__dirname, asset[0]), asset[1]] : artifact && [path.join(runsDir, artifact[1], artifact[2]), mime[path.extname(artifact[2])]];
     if (!file) return json(res, 404, { error: 'Not found.' });

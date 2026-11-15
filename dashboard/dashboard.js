@@ -17,8 +17,8 @@ const lanes = [
     { key: 'conversion', short: 'Conversion', title: 'Currency Conversion', environment: 'Production converter', hint: 'Shows the conversion check from each recorded Smoke or Regression run. It checks that doubling the EUR input doubles the HUF result within rounding tolerance.' }
 ];
 const captions = {
-    'explore.png': 'Currency history chart', 'conversion.png': 'EUR to HUF conversion',
-    'atlas.png': 'Expanded world atlas', 'data.png': 'Comparison table', 'failure.png': 'Browser at the time of failure'
+    explore: 'Currency history chart', conversion: 'EUR to HUF conversion',
+    atlas: 'Expanded world atlas', data: 'Comparison table', failure: 'Browser at the time of failure'
 };
 const state = { mode: '2d', runs: [], status: null, connected: false };
 const controls = byId('controls-dialog');
@@ -296,7 +296,8 @@ function openRun(id) {
         workflow.rel = 'noopener';
         files.append(workflow);
     }
-    const images = element('div', undefined, 'modal-images');
+    const images = element('section', undefined, 'modal-images');
+    const gallery = element('div', undefined, 'screenshot-gallery');
     for (const filename of run.artifacts || []) {
         if (filename === 'comparison.csv') {
             const csv = element('a', 'Download comparison CSV');
@@ -304,17 +305,22 @@ function openRun(id) {
             csv.download = filename;
             files.append(csv);
         }
-        if (!Object.hasOwn(captions, filename)) continue;
+        const name = /^(\w+)\.(png|jpg)$/.exec(filename)?.[1];
+        if (!Object.hasOwn(captions, name)) continue;
+        const figure = element('figure');
         const anchor = element('a');
         const image = element('img');
         anchor.href = image.src = base + '/' + filename;
         anchor.target = '_blank';
         anchor.rel = 'noopener';
-        image.alt = captions[filename];
+        image.alt = captions[name];
         image.loading = 'lazy';
         anchor.append(image);
-        images.append(anchor);
+        figure.append(anchor, element('figcaption', captions[name]));
+        gallery.append(figure);
     }
+    images.append(element('h3', 'Screenshots'), gallery.childElementCount
+        ? gallery : element('p', 'No screenshots were saved for this run.', 'evidence-empty'));
     byId('run-detail').replaceChildren(summary, checks, files, images);
     if (!details.open) details.showModal();
     byId('run-title').focus();

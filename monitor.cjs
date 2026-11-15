@@ -34,9 +34,15 @@ async function check(name, task) {
 }
 
 async function capture(name) {
+  const useJpeg = process.env.EXCHANGE_HOSTED_EVIDENCE === '1' && name !== 'failure.png';
+  const file = useJpeg ? name.replace(/\.png$/, '.jpg') : name;
   try {
-    await page.screenshot({ path: path.join(runPath, name), timeout: 6000 });
-    artifacts.push(name);
+    await page.screenshot({
+      path: path.join(runPath, file),
+      timeout: 6000,
+      ...(useJpeg ? { type: 'jpeg', quality: 70 } : {})
+    });
+    artifacts.push(file);
   } catch (error) {
     errors.push({ check: 'Screenshot', message: String(error.message).split('\n')[0] });
   }
@@ -181,7 +187,10 @@ async function run() {
 function renderReport(report) {
   const date = new Intl.DateTimeFormat('en-GB', {dateStyle:'long', timeStyle:'medium', timeZone:'Europe/Budapest'}).format(started);
   const rows = report.checks.map(({name,status,detail,ms}) => `<tr><th scope="row">${escapeHtml(name)}</th><td><strong class="${status.toLowerCase()}">${status}</strong></td><td>${(ms/1000).toFixed(2)} s</td><td>${escapeHtml(detail)}</td></tr>`).join('');
-  const captures = report.artifacts.filter(file => file.endsWith('.png')).map(file => `<figure><a href="${file}"><img src="${file}" alt="${escapeHtml(file.replace('.png',''))} browser capture"></a><figcaption>${escapeHtml(file.replace('.png',''))}</figcaption></figure>`).join('');
+  const captures = report.artifacts.filter(file => /\.(png|jpg)$/.test(file)).map(file => {
+    const label = escapeHtml(path.parse(file).name);
+    return `<figure><a href="${file}"><img src="${file}" alt="${label} browser capture"></a><figcaption>${label}</figcaption></figure>`;
+  }).join('');
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Exchange Universe monitoring</title>
 <style>body{margin:0;background:#101929;color:#eff5ff;font:16px/1.55 system-ui,sans-serif}main{max-width:1050px;margin:auto;padding:clamp(20px,5vw,64px)}h1{font-size:clamp(28px,5vw,48px);line-height:1.1;margin:.4em 0}h2{margin-top:1.8em}p,figcaption{color:#b8c8dc}a{color:#a7cdff}header{padding:0 0 24px;border-bottom:1px solid #394963}.pass{color:#92e5b5}.fail{color:#ffaea5}.skipped{color:#efcf86}.table{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:14px 12px;border-bottom:1px solid #394963;vertical-align:top}thead{background:#21314a}figure{margin:0}img{display:block;width:100%;border-radius:10px}figcaption{text-transform:capitalize;margin:.6rem 0 1.3rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px}</style>
 <main><header><p>Exchange Universe · ${suite === 'regression' ? 'Regression' : 'Smoke'} · ${trigger === 'scheduled' ? 'Scheduled' : 'Manual'}</p><h1>${report.status === 'Pass' ? 'All live checks passed' : 'Live checks need attention'}</h1><p>${escapeHtml(date)} Budapest time · ${(report.durationMs/1000).toFixed(1)} s</p><a href="${target}">Open the live app</a> · <a href="result.json">Raw results and error log</a></header>

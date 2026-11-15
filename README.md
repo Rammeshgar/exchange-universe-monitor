@@ -10,7 +10,7 @@ Synthetic browser monitoring for the [Exchange Universe currency atlas](https://
 
 ## Hosted monitoring
 
-GitHub Actions runs Smoke every 15 minutes and Regression hourly. The public dashboard refreshes once a minute and offers the latest 200 runs, check details, failure screenshots when available, downloads, and links to the matching Actions runs. GitHub schedules can start late.
+GitHub Actions runs Smoke every 15 minutes and Regression hourly. The public dashboard refreshes once a minute and offers the latest 200 runs, check details, screenshots from completed browser checkpoints and failures when available, downloads, and links to the matching Actions runs. GitHub schedules can start late.
 
 Run either suite from **Actions → Exchange Universe monitoring → Run workflow**. The workflow saves recent results on the `monitor-data` branch and deploys the dashboard to GitHub Pages, including when a check fails. The browser uses the live app's public test paths.
 
