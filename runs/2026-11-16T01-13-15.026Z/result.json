@@ -1,0 +1,33 @@
+{
+  "id": "2026-11-16T01-13-15.026Z",
+  "suite": "smoke",
+  "trigger": "scheduled",
+  "started": "2026-11-16T01:13:15.026Z",
+  "durationMs": 10974,
+  "status": "Pass",
+  "artifacts": [
+    "explore.jpg",
+    "conversion.jpg"
+  ],
+  "checks": [
+    {
+      "name": "Live app and Shiny session",
+      "status": "Pass",
+      "detail": "HTTP 200. Exchange Universe loaded and Shiny bound the chart output.",
+      "ms": 4774
+    },
+    {
+      "name": "Currency history chart",
+      "status": "Pass",
+      "detail": "3 chart series contain numeric data and a rendering surface is present.",
+      "ms": 3535
+    },
+    {
+      "name": "EUR → HUF conversion updates correctly",
+      "status": "Pass",
+      "detail": "100 EUR → 36503.27 HUF. 200 EUR → 73006.55 HUF. Doubling check passed within rounding tolerance.",
+      "ms": 663
+    }
+  ],
+  "runUrl": "https://github.com/Rammeshgar/exchange-universe-monitor/actions/runs/43784882306"
+}
