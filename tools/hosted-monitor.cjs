@@ -2,6 +2,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { loadEnvironmentConfig, decideAlert, sendAlert, errorLabel } = require('../alerts.cjs');
+const { loadPushConfig, sendPush } = require('../ntfy-alerts.cjs');
 
 const root = path.join(__dirname, '..');
 const suites = { smoke: { minutes: 15 }, regression: { minutes: 60 } };
@@ -184,9 +185,36 @@ async function notify(snapshot, incoming) {
   }
 }
 
+async function notifyPush(snapshot, incoming) {
+  const config = loadPushConfig(process.env);
+  if (!config) {
+    console.log('Private ntfy alerts are unconfigured. Hosted checks and dashboard publication continue.');
+    return;
+  }
+  const file = path.join(snapshot, 'ntfy-incidents.json');
+  const state = await readJson(file, {});
+  for (const id of (await directories(incoming)).sort()) {
+    const run = await readJson(path.join(incoming, id, 'result.json'));
+    if (!Object.hasOwn(suites, run.suite)) continue;
+    const type = decideAlert(state[run.suite], run.status, config);
+    if (!type) continue;
+    try {
+      await sendPush(config, type, run);
+      state[run.suite] = type === 'recovery' ? null : Date.now();
+      await writeJson(file, state);
+      console.log('ntfy ' + run.suite + ' ' + type + ': accepted.');
+    } catch {
+      // Never emit endpoint, token, request body or response details in Actions logs.
+      console.error('Private ntfy alert delivery failed for ' + run.suite + '.');
+      process.exitCode = 1;
+    }
+  }
+}
+
 const [mode, ...args] = process.argv.slice(2);
-const job = { record, publish, notify }[mode];
-if (typeof job !== 'function' || !Object.hasOwn({ record, publish, notify }, mode)) throw new Error('Unknown hosted monitor command.');
+const jobs = { record, publish, notify, 'notify-push': notifyPush };
+const job = jobs[mode];
+if (typeof job !== 'function' || !Object.hasOwn(jobs, mode)) throw new Error('Unknown hosted monitor command.');
 job(...args).catch(error => {
   console.error(error.code === 'EMAIL_CONFIG' ? 'Hosted SMTP configuration is incomplete.' : error.message);
   process.exitCode = 1;

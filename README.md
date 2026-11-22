@@ -16,6 +16,10 @@ Run either suite from **Actions → Exchange Universe monitoring → Run workflo
 
 For hosted alerts, set the `MAIL_SERVER_ADDRESS`, `MAIL_SERVER_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SENDER_ADDRESS`, and `MAIL_RECIPIENT_ADDRESS` repository Actions secrets. The SMTP step handles failure, reminder, and recovery independently for each suite. Optional Actions variables `ALERT_TIMEZONE`, `ALERT_START_HOUR`, and `ALERT_END_HOUR` control the failure notification window.
 
+### Optional private phone notifications (ntfy)
+
+Create a **private, authenticated** [ntfy](https://ntfy.sh/) topic (on a reserved hosted topic or an authenticated HTTPS instance) and subscribe to it on your phone. Store its HTTPS topic URL and a publish-capable access token in the repository's Actions secrets as `NTFY_TOPIC_URL` and `NTFY_ACCESS_TOKEN`. Do not put the URL or token in this README or the public dashboard. Both must be configured; otherwise the push step is disabled. The phone alerts have their own per-suite failure, hourly reminder and recovery state; SMTP and scheduled checks continue independently. Notifications include only the public suite status, UTC time and a dashboard link. They never upload screenshots, check details, logs or credentials. See [authentication instructions](https://docs.ntfy.sh/publish/#authentication).
+
 ## Install and start locally
 
 1. Download **Exchange-Universe-Monitor-Windows.zip** from Releases and extract it to a folder you can write to.
