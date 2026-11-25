@@ -1,0 +1,47 @@
+{
+  "id": "2026-11-25T12-44-27.606Z",
+  "suite": "regression",
+  "trigger": "scheduled",
+  "started": "2026-11-25T12:44:27.606Z",
+  "durationMs": 17531,
+  "status": "Pass",
+  "artifacts": [
+    "explore.jpg",
+    "conversion.jpg",
+    "atlas.jpg",
+    "data.jpg"
+  ],
+  "checks": [
+    {
+      "name": "Live app and Shiny session",
+      "status": "Pass",
+      "detail": "HTTP 202. Exchange Universe loaded and Shiny bound the chart output.",
+      "ms": 13184
+    },
+    {
+      "name": "Currency history chart",
+      "status": "Pass",
+      "detail": "3 chart series contain numeric data and a rendering surface is present.",
+      "ms": 1961
+    },
+    {
+      "name": "EUR → HUF conversion updates correctly",
+      "status": "Pass",
+      "detail": "100 EUR → 37358.28 HUF. 200 EUR → 74716.55 HUF. Doubling check passed within rounding tolerance.",
+      "ms": 616
+    },
+    {
+      "name": "Interactive currency atlas",
+      "status": "Pass",
+      "detail": "241 interactive country shapes loaded. Expanded map opened and returned to its panel.",
+      "ms": 292
+    },
+    {
+      "name": "Comparison data and CSV export",
+      "status": "Pass",
+      "detail": "Comparison table populated. CSV export contained 3 data rows.",
+      "ms": 575
+    }
+  ],
+  "runUrl": "https://github.com/Rammeshgar/exchange-universe-monitor/actions/runs/45616600460"
+}
