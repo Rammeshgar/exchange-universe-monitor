@@ -1,0 +1,45 @@
+{
+  "id": "2026-11-27T18-54-46.697Z",
+  "suite": "regression",
+  "trigger": "scheduled",
+  "started": "2026-11-27T18:54:46.697Z",
+  "durationMs": 86205,
+  "status": "Fail",
+  "artifacts": [
+    "failure.png",
+    "atlas.jpg"
+  ],
+  "checks": [
+    {
+      "name": "Live app and Shiny session",
+      "status": "Pass",
+      "detail": "HTTP 202. Exchange Universe loaded and Shiny bound the chart output.",
+      "ms": 10318
+    },
+    {
+      "name": "Currency history chart",
+      "status": "Fail",
+      "detail": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "ms": 30005
+    },
+    {
+      "name": "EUR → HUF conversion updates correctly",
+      "status": "Fail",
+      "detail": "page.waitForFunction: Timeout 25000ms exceeded.",
+      "ms": 25118
+    },
+    {
+      "name": "Interactive currency atlas",
+      "status": "Pass",
+      "detail": "241 interactive country shapes loaded. Expanded map opened and returned to its panel.",
+      "ms": 267
+    },
+    {
+      "name": "Comparison data and CSV export",
+      "status": "Fail",
+      "detail": "page.waitForFunction: Timeout 20000ms exceeded.",
+      "ms": 20077
+    }
+  ],
+  "runUrl": "https://github.com/Rammeshgar/exchange-universe-monitor/actions/runs/46052858213"
+}
