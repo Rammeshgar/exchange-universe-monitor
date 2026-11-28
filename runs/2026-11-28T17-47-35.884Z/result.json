@@ -1,0 +1,32 @@
+{
+  "id": "2026-11-28T17-47-35.884Z",
+  "suite": "smoke",
+  "trigger": "scheduled",
+  "started": "2026-11-28T17:47:35.884Z",
+  "durationMs": 78584,
+  "status": "Fail",
+  "artifacts": [
+    "failure.png"
+  ],
+  "checks": [
+    {
+      "name": "Live app and Shiny session",
+      "status": "Pass",
+      "detail": "HTTP 202. Exchange Universe loaded and Shiny bound the chart output.",
+      "ms": 23101
+    },
+    {
+      "name": "Currency history chart",
+      "status": "Fail",
+      "detail": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "ms": 30005
+    },
+    {
+      "name": "EUR → HUF conversion updates correctly",
+      "status": "Fail",
+      "detail": "page.waitForFunction: Timeout 25000ms exceeded.",
+      "ms": 25094
+    }
+  ],
+  "runUrl": "https://github.com/Rammeshgar/exchange-universe-monitor/actions/runs/46172327542"
+}
